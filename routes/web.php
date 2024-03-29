@@ -16,6 +16,12 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/test', function () {
+    return Inertia::render(
+        'Test'
+    );
+});
+
 Route::get('/up-memo', [LabelController::class, 'index'])->middleware(['auth', 'verified'])->name('up-memo');
 Route::get('/dashboard', [MemoController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
