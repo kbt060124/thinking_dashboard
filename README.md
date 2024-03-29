@@ -1,66 +1,238 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Webアプリケーション仕様書
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 概要
+このWebアプリケーションは、ユーザーがメモを作成、管理できるプラットフォームです。ユーザーはテキストや画像をアップロードしてメモを作成し、それらをダッシュボードで確認できます。
 
-## About Laravel
+## 主な機能
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### メモの作成
+- ユーザーはテキストや画像をアップロードしてメモを作成できます。
+- 画像からテキストを抽出する機能があります（Google Vision APIを使用）。
+- メモにはラベルを付けることができます。
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### ダッシュボード
+- ユーザーはダッシュボードで以下の情報を確認できます：
+  - 作成したメモの総数
+  - メモに含まれる文字の総数
+  - メモの作成に費やした時間の総数
+  - メモのラベル分布（円グラフ）
+  - 月間のメモ作成推移（折れ線グラフ）
+  - メモ作成のカレンダーヒートマップ
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### メモの管理
+- ユーザーは作成したメモを一覧で確認し、編集や削除ができます。
 
-## Learning Laravel
+## 技術スタック
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### フロントエンド
+- React
+- Tailwind CSS
+- Chart.js
+- React Select
+- React Date Picker
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### バックエンド
+- Laravel
+- MySQL
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### その他
+- Docker
+- Google Vision API
 
-## Laravel Sponsors
+## コードスニペット
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### メモの作成処理
 
-### Premium Partners
+```72:84:app/Http/Controllers/MemoController.php
+    public function store(Request $request)
+    {
+        $posts = $request->all(); // 全データを受け取る場合
+        $memos = [];
+        foreach ($posts as $post) {
+            $memos[] = [
+                "text" => $post['text'],
+                "date" => date('Y-m-d', strtotime($post['date'])),
+                "user_id" => auth()->id(),
+                "label_id" => $post['label'],
+            ];
+        }
+        Memo::insert($memos);
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
 
-## Contributing
+### ダッシュボードのデータ準備
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```46:57:app/Http/Controllers/MemoController.php
+        return Inertia::render('Dashboard', [
+            'totalMemos' => $totalMemos,
+            'totalTime' => $totalTime,
+            'totalCharacters' => $totalCharacters,
+            'colors' => $colors,
+            'alphaColors' => $alphaColors,
+            'pieData' => $pieData,
+            'pieDataLabels' => $pieDataLabels,
+            'pieDataCounts' => $pieDataCounts,
+            'months' => $months,
+            'lineData' => $lineData,
+            'heatMapData' => $heatMapData
+```
 
-## Code of Conduct
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### メモ作成ページ
 
-## Security Vulnerabilities
+```12:316:resources/js/Pages/UpMemo.jsx
+const UpMemo = (props) => {
+    const labels = props.labels;
+    const maxImagesUpload = 20;
+    const inputId = Math.random().toString(32).substring(2);
+    const key = usePage().props.API;
+    const googleUrl = `https://vision.googleapis.com/v1/images:annotate?key=${key}`;
+    const [images, setImages] = useState([]);
+    const [texts, setTexts] = useState([]);
+    // const [labels, setLabels] = useState([]);
+    const [selectLabels, setSelectLabels] = useState([]);
+    const [date, setDate] = useState(new Date().toISOString());
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    const handleOnSubmit = async (e) => {
+        e.preventDefault();
+        const postData = {};
 
-## License
+        images.forEach((image, index) => {
+            let array = {};
+            array.text = texts[index];
+            array.date = new Date(date).toISOString();
+            array.label = selectLabels[index]
+                ? selectLabels[index].value
+                : "デフォルト値";
+            postData[index] = array;
+        });
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+        try {
+            await axios.post(route("memos.store"), postData, {
+                headers: { "Content-Type": "application/json" },
+            });
+        } catch (error) {
+            console.error("Error calling the Vision API", error);
+            console.error("Response from Vision API:", error.response);
+            setTexts((prevText) => [...prevText, null]);
+        }
+
+        setImages([]);
+        setTexts([]);
+        setSelectLabels([]);
+    };
+```
+
+
+### ダッシュボードページ
+
+```34:209:resources/js/Pages/Dashboard.jsx
+export default function Dashboard(props) {
+    console.log(props.heatMapData);
+
+    const wordData = [
+        { value: "JavaScript", count: 38 },
+        { value: "React", count: 30 },
+        { value: "Nodejs", count: 28 },
+        { value: "Express.js", count: 25 },
+        { value: "HTML5", count: 33 },
+        { value: "MongoDB", count: 18 },
+        { value: "CSS3", count: 20 },
+    ];
+
+    const pieOptions = {
+        plugins: {
+            //タイトル関連
+            legend: {
+                labels: {
+                    color: "#fff",
+                },
+            },
+        },
+    };
+
+    const lineOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: "top",
+                labels: {
+                    color: "#fff",
+                },
+            },
+            title: {
+                display: false,
+                text: "月間推移",
+            },
+        },
+        scales: {
+            //x軸関連
+            x: {
+                ticks: {
+                    color: "#fff", //テキストの色
+                },
+            },
+            //y軸関連
+            y: {
+                ticks: {
+                    color: "#fff",
+                },
+            },
+        },
+    };
+```
+
+
+## デプロイメント
+このアプリケーションはDockerを使用してデプロイされます。`docker-compose.yml`ファイルには、アプリケーションのサービス（Laravelアプリケーション、MySQLデータベースなど）の設定が含まれています。
+
+
+```1:41:docker-compose.yml
+services:
+#以下コードを追加
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links:
+            - mysql:mysql
+        ports:
+            - 8080:80
+        environment:
+            #PMA_USER: "${DB_USERNAME}"
+            #PMA_PASSWORD: "${DB_PASSWORD}"
+            PMA_HOST: mysql
+        networks:
+            - sail
+    laravel.test:
+        build:
+            context: ./vendor/laravel/sail/runtimes/8.3
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-8.3/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - redis
+            - meilisearch
+            - mailpit
+```
+
+
+## 注意事項
+- このアプリケーションは開発中であり、仕様は変更される可能性があります。
+- Google Vision APIを使用するためには、Google Cloud PlatformでAPIキーを取得し、適切に設定する必要があります。
